@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>مقدّر الطلاء | Wall Paint Estimator</title>
+<style>
+:root{--bg:#0f172a;--panel:#1e293b;--panel2:#162033;--line:#334155;--tx:#e2e8f0;--mut:#94a3b8;--acc:#38bdf8;--acc2:#0ea5e9;--bad:#f87171;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:inherit}
+body{margin:0;background:var(--bg);color:var(--tx);font-family:"Segoe UI",Tahoma,"Noto Naskh Arabic",system-ui,sans-serif;line-height:1.5}
+input,select,button{font:inherit;color:inherit}
+.bar{display:flex;gap:10px;align-items:center;justify-content:space-between;padding:12px 18px;background:var(--panel);border-bottom:1px solid var(--line);position:sticky;top:env(safe-area-inset-top,0px);z-index:5;flex-wrap:wrap}
+.bar h1{font-size:1.1rem;margin:0}
+.btn{background:var(--acc);color:#04283b;border:0;border-radius:8px;padding:8px 14px;cursor:pointer;font-weight:600}
+.btn:hover{background:var(--acc2)}
+.btn.sec{background:transparent;color:var(--tx);border:1px solid var(--line)}
+.btn.sec:hover{border-color:var(--acc);color:var(--acc)}
+.btn.sm{padding:4px 10px;font-size:.85rem}
+.btn.del{color:var(--bad)}
+.wrap{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:16px;padding:16px;max-width:1400px;margin:auto}
+@media(max-width:900px){.wrap{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px}
+.card h2{font-size:1rem;margin:0 0 10px;color:var(--acc)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
+label{display:flex;flex-direction:column;gap:3px;font-size:.82rem;color:var(--mut)}
+input,select{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:6px 8px;width:100%}
+input:focus,select:focus,button:focus-visible{outline:2px solid var(--acc);outline-offset:1px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;align-items:center}
+.tab{padding:5px 12px;border-radius:999px;border:1px solid var(--line);cursor:pointer;background:transparent;font-size:.88rem}
+.tab.on{background:var(--acc);color:#04283b;border-color:var(--acc);font-weight:600}
+.tab.off{opacity:.5;text-decoration:line-through}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.chk{flex-direction:row;align-items:center;gap:6px;color:var(--tx);font-size:.9rem}
+.chk input{width:auto}
+.op{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:10px;margin-top:8px}
+.op .head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;gap:8px}
+.op select{max-width:240px}
+canvas{width:100%;display:block;background:#0b1220;border:1px solid var(--line);border-radius:8px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+.stat{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:10px}
+.stat b{display:block;font-size:1.35rem;color:var(--acc)}
+.stat span{font-size:.8rem;color:var(--mut)}
+.hint{font-size:.78rem;color:var(--mut);margin-top:6px}
+.pw{grid-column:1/-1;width:100%;border-collapse:collapse;font-size:.85rem}.pw th,.pw td{padding:4px 6px;border-bottom:1px solid var(--line);text-align:start}
+#cv{touch-action:none;cursor:grab}canvas.sk{height:auto;max-width:480px;cursor:crosshair}
+dialog{background:var(--panel);color:var(--tx);border:1px solid var(--line);border-radius:12px;width:min(560px,92vw)}dialog textarea{width:100%;background:var(--bg);color:var(--tx);border:1px solid var(--line);border-radius:6px;font-family:monospace;font-size:.8rem}dialog::backdrop{background:rgba(0,0,0,.6)}
+#report{display:none}
+@media print{
+ @page{margin:14mm}
+ body{background:#fff;color:#000}
+ .bar,.wrap{display:none!important}
+ #report{display:block;color:#000;font-family:"Segoe UI",Tahoma,sans-serif}
+ #report h1{font-size:1.4rem;margin:0 0 4px}
+ #report h2{font-size:1.05rem;margin:14px 0 6px}
+ #report table{width:100%;border-collapse:collapse;font-size:.85rem;margin-bottom:8px}
+ #report th,#report td{border:1px solid #888;padding:4px 6px;text-align:start}
+ #report th{background:#e8eef4}
+ #report img{max-width:100%;border:1px solid #888;margin:6px 0}
+ .wb{break-inside:avoid;margin-bottom:12px}
+ .sum{border:2px solid #000;padding:8px;break-inside:avoid}
+}
+</style>
+</head>
+<body>
+<div class="bar">
+ <h1 id="t_title"></h1>
+ <div class="row">
+  <button class="btn sec" id="langBtn"></button>
+  <button class="btn" id="pdfBtn"></button>
+ </div>
+</div>
+
+<div class="wrap">
+ <div>
+  <div class="card">
+   <h2 id="t_walls"></h2>
+   <div class="tabs" id="tabs"></div>
+   <div class="row" style="margin-bottom:10px">
+    <button class="btn sm" id="addW"></button>
+    <button class="btn sm sec" id="dupW"></button>
+    <button class="btn sm sec del" id="delW"></button>
+    <span class="hint" id="wcount"></span>
+   </div>
+   <div id="wallForm"></div>
+  </div>
+  <div class="card" style="margin-top:16px">
+   <h2 id="t_paint"></h2>
+   <div class="grid" id="paintForm"></div></div><div class="card" style="margin-top:16px"><h2 id="t_extra"></h2><div class="grid" id="extraForm"></div><div class="row" style="margin-top:12px"><button class="btn sm sec" id="expBtn"></button><button class="btn sm sec" id="impBtn"></button></div>
+  </div>
+ </div>
+ <div>
+  <div class="card">
+   <h2 id="t_view"></h2>
+   <canvas id="cv" width="800" height="560"></canvas>
+   <div class="hint" id="t_scale"></div>
+  </div>
+  <div class="card" style="margin-top:16px">
+   <h2 id="t_res"></h2>
+   <div class="stats" id="stats"></div>
+  </div>
+ </div>
+</div>
+
+<dialog id="dlg"><textarea id="dlgTa" rows="12" spellcheck="false" dir="ltr"></textarea><div id="dlgMsg" class="hint"></div><div class="row"><button class="btn sm" id="dlgCopy"></button><button class="btn sm" id="dlgApply"></button><button class="btn sm sec" id="dlgFileB"></button><input type="file" id="dlgFile" accept=".json,application/json" hidden><button class="btn sm sec" id="dlgClose"></button></div></dialog>
+<div id="report"></div>
+
+<script>
+const L={
+ar:{title:"مقدّر الطلاء والمواد للجدران",lang:"English",pdf:"طباعة / PDF",walls:"الجدران",add:"+ جدار",dup:"نسخ",del:"حذف",count:n=>"عدد الجدران: "+n,
+name:"اسم الجدار",active:"مفعّل في الحساب",w:"العرض (م)",h:"الارتفاع (م)",ops:"الفتحات",addOp:"+ فتحة",
+rect:"مستطيل (باب/نافذة)",circle:"دائرة كاملة",semi:"نصف دائرة",parab:"قوس قطع مكافئ",quad:"معادلة تربيعية y=a+bx+cx²",custom:"معادلتي الخاصة y=f(x)",fx:"الدالة f(x) — مثال: 1.5 - x^2",qty:"العدد (يضاعف المساحة)",warn:"مساحة الفتحات أكبر من الجدار",badexpr:"الصيغة غير صحيحة",sketch:"رسم حر بيدي",skhint:"ارسم منحنى القمة من اليسار لليمين فوق الخط السفلي؛ الرسم يمثل ارتفاع الفتحة عند كل نقطة",skclear:"مسح الرسم",conv:"حوّل الرسم لمعادلة",extra:"أسطح ومواد إضافية والمشروع",unit:"وحدة الأبعاد",ceil:"مساحة السقف (م²) — تُضاف للطلاء",pcoats:"طبقات المعجون (0 = بدون)",pcov:"تغطية المعجون (م²/كجم)",floor:"مساحة الأرضية (م²)",tw:"عرض البلاطة (سم)",th:"طول البلاطة (سم)",twaste:"هالك البلاط %",putty:"المعجون (كجم)",tiles:"عدد البلاطات",exp:"تصدير المشروع",imp:"استيراد مشروع",dcopy:"نسخ",dapply:"استيراد النص",dfile:"اختيار ملف",close:"إغلاق",badjson:"النص ليس مشروعاً صالحاً",drag:"اسحب الفتحات على الرسم لتحريكها",
+ow:"العرض (م)",oh:"الارتفاع (م)",ox:"البعد عن اليسار (م)",osill:"ارتفاع العتبة (م)",qa:"a",qb:"b",qc:"c",
+paint:"مواصفات الطلاء",cover:"معدل التغطية (م²/لتر)",coats:"عدد الطبقات",bucket:"سعة العبوة (لتر)",waste:"نسبة الهالك %",
+view:"المعاينة الهندسية",res:"النتائج",gross:"المساحة الكلية (م²)",open:"مساحة الفتحات (م²)",net:"المساحة الصافية (م²)",liters:"اللترات المطلوبة",buckets:"عدد العبوات",
+scale:s=>"مقياس رسم موحد: 1 م = "+s+" بكسل",nowall:"لا توجد جدران",
+repT:"تقرير هندسي: تقدير الطلاء",wall:"الجدار",status:"الحالة",on:"مفعّل",offs:"معطّل",dims:"الأبعاد (م)",opening:"الفتحة",type:"النوع",area:"المساحة (م²)",
+sum:"ملخص المشتريات",totNet:"إجمالي المساحة الصافية",totL:"إجمالي اللترات (مع الهالك)",totB:"العبوات المطلوبة",noop:"لا فتحات",
+formula:"المعادلة",fq:(a,b,c)=>`∫ من −W/2 إلى W/2 للدالة ${a}+${b}x+${c}x²`,def:"جدار"},
+en:{title:"Wall Paint & Material Estimator",lang:"العربية",pdf:"Print / PDF",walls:"Walls",add:"+ Wall",dup:"Duplicate",del:"Delete",count:n=>"Walls: "+n,
+name:"Wall name",active:"Include in totals",w:"Width (m)",h:"Height (m)",ops:"Openings",addOp:"+ Opening",
+rect:"Rectangle (door/window)",circle:"Full circle",semi:"Semicircle",parab:"Parabolic arch",quad:"Custom quadratic y=a+bx+cx²",custom:"My own equation y=f(x)",fx:"Function f(x), e.g. 1.5 - x^2",qty:"Quantity (multiplies area)",warn:"Openings exceed wall area",badexpr:"Invalid expression",sketch:"Freehand sketch",skhint:"Draw the top curve left to right above the baseline; it sets the opening height at each point",skclear:"Clear sketch",conv:"Convert sketch to equation",extra:"Extra surfaces and project",unit:"Length unit",ceil:"Ceiling area (m²), added to paint",pcoats:"Putty coats (0 = none)",pcov:"Putty coverage (m²/kg)",floor:"Floor area (m²)",tw:"Tile width (cm)",th:"Tile length (cm)",twaste:"Tile waste %",putty:"Putty (kg)",tiles:"Tiles",exp:"Export project",imp:"Import project",dcopy:"Copy",dapply:"Import text",dfile:"Choose file",close:"Close",badjson:"This text is not a valid project",drag:"Drag openings on the drawing to move them",
+ow:"Width (m)",oh:"Height (m)",ox:"Offset from left (m)",osill:"Sill height (m)",qa:"a",qb:"b",qc:"c",
+paint:"Paint setup",cover:"Coverage (m²/L)",coats:"Coats",bucket:"Bucket size (L)",waste:"Waste %",
+view:"Geometric preview",res:"Results",gross:"Gross area (m²)",open:"Openings area (m²)",net:"Net area (m²)",liters:"Litres needed",buckets:"Buckets to buy",
+scale:s=>"Uniform scale: 1 m = "+s+" px",nowall:"No walls",
+repT:"Engineering report: paint estimate",wall:"Wall",status:"Status",on:"Active",offs:"Disabled",dims:"Dimensions (m)",opening:"Opening",type:"Type",area:"Area (m²)",
+sum:"Purchase summary",totNet:"Total net area",totL:"Total litres (with waste)",totB:"Buckets required",noop:"No openings",
+formula:"Formula",fq:(a,b,c)=>`∫ from −W/2 to W/2 of ${a}+${b}x+${c}x²`,def:"Wall"}
+};
+const TYPES=["rect","circle","semi","parab","quad","custom","sketch"];
+let S=load();
+let cur=0;
+function def(){return{lang:"ar",walls:[nw(1,"Main Wall")],paint:{cover:10,coats:2,bucket:4,waste:10}}}
+function nw(n,name){return{id:Date.now()+Math.random(),name:name||"",active:true,w:5,h:3,ops:[]}}
+function load(){try{const j=localStorage.getItem("wpe_v1");if(j){const o=JSON.parse(j);if(o&&o.walls&&o.walls.length)return o}}catch(e){}
+ const d=def();d.walls[0].name="";return d}
+function save(){try{localStorage.setItem("wpe_v1",JSON.stringify(S))}catch(e){}}
+const t=()=>L[S.lang];
+const num=v=>{const x=parseFloat(v);return isFinite(x)?x:0};
+const f2=x=>(Math.round(x*100)/100).toLocaleString(S.lang==="ar"?"ar-EG":"en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
+const wname=(w,i)=>w.name||(t().def+" "+(i+1));
+
+/* ---- units, sketch, project tools ---- */
+let TR=null,drag=null;
+const UN={m:{f:1,ar:"م",en:"m"},cm:{f:100,ar:"سم",en:"cm"},ft:{f:3.28084,ar:"قدم",en:"ft"}};
+const uf=()=>UN[S.unit||"m"].f,r4=x=>+(+x).toFixed(4);
+const cvv=el=>el.dataset.len&&uf()!==1?String(r4(num(el.value)/uf())):el.value;
+function fixS(){S.paint=Object.assign({cover:10,coats:2,bucket:4,waste:10,ceil:0,pcoats:0,pcov:1.2,floor:0,tw:60,th:60,twaste:10},S.paint||{});S.unit=S.unit||"m"}
+function polyFit(ys,deg){ // least squares on t in [-1,1]
+ const n=ys.length,m=deg+1,A=Array.from({length:m},()=>new Array(m+1).fill(0));
+ for(let i=0;i<n;i++){const t=-1+2*i/(n-1),pw=[1];for(let k=1;k<=2*deg;k++)pw[k]=pw[k-1]*t;for(let r=0;r<m;r++){for(let c=0;c<m;c++)A[r][c]+=pw[r+c];A[r][m]+=ys[i]*pw[r]}}
+ for(let c=0;c<m;c++){let p=c;for(let r=c+1;r<m;r++)if(Math.abs(A[r][c])>Math.abs(A[p][c]))p=r;[A[c],A[p]]=[A[p],A[c]];for(let r=0;r<m;r++){if(r===c)continue;const f=A[r][c]/A[c][c];for(let k=c;k<=m;k++)A[r][k]-=f*A[c][k]}}
+ return A.map((r,i)=>r[m]/r[i]);
+}
+function fillPts(r){const n=r.length,o=r.slice(),first=o.findIndex(v=>v!=null);let li=-1;o.forEach((v,i)=>{if(v!=null)li=i});if(first<0)return o.map(()=>0);
+ for(let i=0;i<n;i++){if(o[i]==null){if(i<first||i>li){o[i]=0;continue}let a=i-1;while(o[a]==null)a--;let b=i+1;while(o[b]==null)b++;o[i]=o[a]+(o[b]-o[a])*(i-a)/(b-a)}}return o}
+function drawPad(cv,o){const c=cv.getContext("2d"),W=cv.width,H=cv.height;c.fillStyle="#0b1220";c.fillRect(0,0,W,H);c.strokeStyle="#334155";c.lineWidth=1;for(let i=1;i<4;i++){c.beginPath();c.moveTo(0,H*i/4);c.lineTo(W,H*i/4);c.stroke()}
+ c.strokeStyle="#38bdf8";c.lineWidth=2;c.beginPath();c.moveTo(0,H-1);c.lineTo(W,H-1);c.stroke();
+ const P=o.pts;if(!P||P.length<2)return;c.beginPath();c.moveTo(0,H);P.forEach((v,i)=>c.lineTo(i/(P.length-1)*W,H-v*H));c.lineTo(W,H);c.closePath();c.fillStyle="rgba(245,158,11,.25)";c.fill();c.strokeStyle="#f59e0b";c.stroke()}
+function sketchUI(o,i,T){return `<div style="margin-top:8px"><canvas class="sk" data-sk="${i}" width="480" height="240" style="touch-action:none"></canvas><div class="row" style="margin-top:6px"><button class="btn sm sec" data-skc="${i}">${T.skclear}</button><select data-deg style="max-width:70px">${[2,3,4,5,6].map(d=>`<option ${d===4?"selected":""}>${d}</option>`).join("")}</select><button class="btn sm" data-conv="${i}">${T.conv}</button></div><div class="hint">${T.skhint}</div></div>`}
+function bindSketch(){const w=S.walls[cur],N=49;
+ document.querySelectorAll("canvas[data-sk]").forEach(cv=>{const o=w.ops[+cv.dataset.sk];drawPad(cv,o);let raw=null,last=null;
+  const pt=e=>{const r=cv.getBoundingClientRect();return{x:Math.min(1,Math.max(0,(e.clientX-r.left)/r.width)),y:Math.min(1,Math.max(0,1-(e.clientY-r.top)/r.height))}};
+  const put=(a,b)=>{const k0=Math.round(a.x*(N-1)),k1=Math.round(b.x*(N-1)),s=k0<=k1?1:-1;for(let k=k0;;k+=s){const t=k1===k0?1:(k-k0)/(k1-k0),y=a.y+(b.y-a.y)*t;raw[k]=raw[k]==null?y:Math.max(raw[k],y);if(k===k1)break}};
+  const upd=()=>{o.pts=fillPts(raw);drawPad(cv,o);refresh(true)};
+  cv.onpointerdown=e=>{raw=new Array(N).fill(null);last=pt(e);cv.setPointerCapture(e.pointerId);put(last,last);upd()};
+  cv.onpointermove=e=>{if(!raw)return;const p=pt(e);put(last,p);last=p;upd()};
+  cv.onpointerup=cv.onpointercancel=()=>{raw=null};
+ });
+ document.querySelectorAll("[data-skc]").forEach(b=>b.onclick=()=>{w.ops[+b.dataset.skc].pts=[];renderAll()});
+ document.querySelectorAll("[data-conv]").forEach(b=>b.onclick=()=>{const o=w.ops[+b.dataset.conv];if(!o.pts||o.pts.length<3)return;
+  const deg=+b.closest(".op").querySelector("[data-deg]").value,s=Math.max(.01,num(o.w))/2,H=num(o.h);
+  const c=polyFit(o.pts.map(v=>v*H),deg);
+  o.fx=c.map((v,k)=>(v<0?"-":(k?"+":""))+Math.abs(+v.toFixed(4))+(k?"*(x/"+(+s.toFixed(4))+")"+(k>1?"^"+k:""):"")).join("");
+  o.type="custom";delete o.pts;renderAll()});
+}
+function hit(e){const cv=$("cv"),r=cv.getBoundingClientRect(),px=(e.clientX-r.left)*cv.width/r.width,py=(e.clientY-r.top)*cv.height/r.height;return{x:(px-TR.ox)/TR.sc,y:TR.WH-(py-TR.oy)/TR.sc}}
+function renderExtra(){const T=t(),p=S.paint;
+ const ub=Object.keys(UN).map(k=>`<option value="${k}" ${S.unit===k?"selected":""}>${S.lang==="ar"?UN[k].ar:UN[k].en}</option>`).join("");
+ $("extraForm").innerHTML=`<label>${T.unit}<select id="unitSel">${ub}</select></label>`+field(T.ceil,p.ceil,"ceil")+field(T.pcoats,p.pcoats,"pcoats")+field(T.pcov,p.pcov,"pcov")+field(T.floor,p.floor,"floor")+field(T.tw,p.tw,"tw")+field(T.th,p.th,"th")+field(T.twaste,p.twaste,"twaste");
+ $("unitSel").onchange=e=>{S.unit=e.target.value;save();renderAll()};
+ $("extraForm").querySelectorAll("input").forEach(el=>el.oninput=()=>{p[el.dataset.f]=el.value;refresh(false)})}
+function openDlg(txt){const d=$("dlg");$("dlgTa").value=txt;$("dlgMsg").textContent="";if(d.showModal)d.showModal();else d.setAttribute("open","")}
+/* ---- safe expression parser (no eval) ---- */
+const _fc={};
+function compileF(src){
+ src=String(src||"");
+ if(_fc[src]!==undefined)return _fc[src];
+ let s=src.toLowerCase().replace(/\s+/g,"").replace(/[٠-٩]/g,c=>"٠١٢٣٤٥٦٧٨٩".indexOf(c)).replace(/٫/g,".").replace(/×/g,"*").replace(/÷/g,"/").replace(/²/g,"^2").replace(/³/g,"^3").replace(/π/g,"pi").replace(/√/g,"sqrt");
+ let p=0,fn=null;
+ const FN={sin:Math.sin,cos:Math.cos,tan:Math.tan,asin:Math.asin,acos:Math.acos,atan:Math.atan,sqrt:Math.sqrt,abs:Math.abs,exp:Math.exp,ln:Math.log,log:Math.log10};
+ const E=()=>{let a=T();while(s[p]==="+"||s[p]==="-"){const op=s[p++],b=T(),l=a;a=op==="+"?x=>l(x)+b(x):x=>l(x)-b(x)}return a};
+ const T=()=>{let a=U();for(;;){const c=s[p];if(c==="*"||c==="/"){p++;const b=U(),l=a;a=c==="*"?x=>l(x)*b(x):x=>l(x)/b(x)}else if(c&&/[a-z0-9.(]/.test(c)){const b=U(),l=a;a=x=>l(x)*b(x)}else return a}};
+ const U=()=>{if(s[p]==="-"){p++;const a=U();return x=>-a(x)}if(s[p]==="+"){p++;return U()}return P()};
+ const P=()=>{const a=A();if(s[p]==="^"){p++;const b=U();return x=>Math.pow(a(x),b(x))}return a};
+ const A=()=>{const m=/^(\d+\.?\d*|\.\d+)/.exec(s.slice(p));
+  if(m){p+=m[0].length;const v=parseFloat(m[0]);return()=>v}
+  if(s[p]==="("){p++;const a=E();if(s[p]!==")")throw 0;p++;return a}
+  const id=/^[a-z]+/.exec(s.slice(p));if(!id)throw 0;p+=id[0].length;const n=id[0];
+  if(n==="x")return x=>x;if(n==="pi")return()=>Math.PI;if(n==="e")return()=>Math.E;
+  if(FN[n]){if(s[p]!=="(")throw 0;p++;const a=E();if(s[p]!==")")throw 0;p++;const f=FN[n];return x=>f(a(x))}
+  throw 0};
+ try{const f=E();if(p!==s.length)throw 0;f(0);fn=f}catch(e){fn=null}
+ return _fc[src]=fn;
+}
+function evalF(o,x){const f=compileF(o.fx);if(!f)return 0;const v=f(x);return isFinite(v)?v:0}
+function customArea(o){const W=Math.max(0,num(o.w)),n=400,h=W/n;let s=0;for(let i=0;i<=n;i++){const y=Math.max(0,evalF(o,-W/2+i*h));s+=y*(i===0||i===n?1:i%2?4:2)}return s*h/3} // Simpson's rule on max(0,f)
+function customHint(o){return compileF(o.fx)?"∫ max(0,f(x))dx = "+f2(customArea(o))+" m² · sin cos tan sqrt abs exp ln log ^ pi":"⚠ "+t().badexpr}
+/* ---- math ---- */
+function opDims(o){ // effective width/height
+ const W=Math.max(0,num(o.w));
+ if(o.type==="circle")return{W,H:W};
+ if(o.type==="semi")return{W,H:W/2};
+ if(o.type==="custom"){let m=0;for(let i=0;i<=80;i++)m=Math.max(m,evalF(o,-W/2+W*i/80));return{W,H:m}}
+ if(o.type==="quad"){const a=num(o.a),b=num(o.b),c=num(o.c);let m=0;for(let i=0;i<=40;i++){const x=-W/2+W*i/40;m=Math.max(m,a+b*x+c*x*x)}return{W,H:m}}
+ return{W,H:Math.max(0,num(o.h))};
+}
+function opArea(o){return opArea1(o)*Math.max(1,Math.floor(num(o.q)||1))}
+function opArea1(o){
+ const W=Math.max(0,num(o.w));
+ switch(o.type){
+  case"circle":return Math.PI*(W/2)**2;
+  case"semi":return .5*Math.PI*(W/2)**2;
+  case"parab":return(2/3)*W*Math.max(0,num(o.h));
+  case"custom":return customArea(o);
+  case"sketch":{const P=o.pts||[];let s=0;for(let i=1;i<P.length;i++)s+=(P[i]+P[i-1])/2;return P.length>1?s/(P.length-1)*W*Math.max(0,num(o.h)):0}
+  case"quad":{const a=num(o.a),b=num(o.b),c=num(o.c);// ∫(a+bx+cx²)dx over [-W/2,W/2] = aW + cW³/12 (b term is odd)
+   return Math.max(0,a*W+c*W**3/12)}
+  default:return W*Math.max(0,num(o.h));
+ }
+}
+function wallCalc(w){const gross=num(w.w)*num(w.h);const op=w.ops.reduce((s,o)=>s+opArea(o),0);return{gross,op,net:Math.max(0,gross-op)}}
+function totals(){let gross=0,op=0,net=0;S.walls.forEach(w=>{if(w.active){const c=wallCalc(w);gross+=c.gross;op+=c.op;net+=c.net}});
+ const p=S.paint;const cover=Math.max(.0001,num(p.cover));const ceil=Math.max(0,num(p.ceil)),area=net+ceil;const liters=area*Math.max(1,num(p.coats))/cover*(1+Math.max(0,num(p.waste))/100);
+ const buckets=num(p.bucket)>0?Math.ceil(liters/num(p.bucket)-1e-9):0;const putty=area*Math.max(0,num(p.pcoats))/(num(p.pcov)||1.2);const tiles=num(p.floor)>0&&num(p.tw)>0&&num(p.th)>0?Math.ceil(num(p.floor)*(1+Math.max(0,num(p.twaste))/100)/(num(p.tw)*num(p.th)/1e4)-1e-9):0;return{gross,op,net,ceil,area,liters,buckets,putty,tiles}}
+
+/* ---- drawing ---- */
+function draw(cv,w,opts){
+ const ctx=cv.getContext("2d"),CW=cv.width,CH=cv.height,pad=36;
+ ctx.clearRect(0,0,CW,CH);
+ const light=opts&&opts.light;
+ ctx.fillStyle=light?"#fff":"#0b1220";ctx.fillRect(0,0,CW,CH);
+ const WW=Math.max(.01,num(w.w)),WH=Math.max(.01,num(w.h));
+ const sc=Math.min((CW-2*pad)/WW,(CH-2*pad)/WH);       // uniform scale
+ const ox=(CW-WW*sc)/2,oy=(CH-WH*sc)/2;               // auto-centre
+ if(cv.id==="cv")TR={ox,oy,sc,WH};const X=x=>ox+x*sc,Y=y=>oy+(WH-y)*sc;                 // world(m, y up) -> canvas
+ ctx.fillStyle=light?"#dbe7f0":"#26374f";ctx.fillRect(X(0),Y(WH),WW*sc,WH*sc);
+ ctx.lineWidth=2;ctx.strokeStyle=light?"#222":"#38bdf8";ctx.strokeRect(X(0),Y(WH),WW*sc,WH*sc);
+ w.ops.forEach((o,i)=>{
+  const{W,H}=opDims(o);const x0=num(o.x),y0=num(o.sill);const cx=x0+W/2;
+  ctx.beginPath();
+  if(o.type==="rect"){ctx.rect(X(x0),Y(y0+H),W*sc,H*sc)}
+  else if(o.type==="circle"){ctx.arc(X(cx),Y(y0+W/2),W/2*sc,0,Math.PI*2)}
+  else if(o.type==="semi"){ctx.moveTo(X(x0),Y(y0));ctx.arc(X(cx),Y(y0),W/2*sc,Math.PI,0,false);ctx.closePath()}
+  else{ // parabola or quadratic, sampled
+   const n=80;ctx.moveTo(X(x0),Y(y0));
+   for(let k=0;k<=n;k++){const u=-W/2+W*k/n;let y;
+    if(o.type==="parab")y=num(o.h)*(1-(2*u/W)**2);else if(o.type==="custom")y=Math.max(0,evalF(o,u));else if(o.type==="sketch"){const P=o.pts&&o.pts.length>1?o.pts:[0,0],q=Math.min(P.length-1,Math.max(0,(u/W+.5)*(P.length-1))),i=Math.min(P.length-2,Math.floor(q)),fr=q-i;y=(P[i]*(1-fr)+P[i+1]*fr)*num(o.h)}else y=Math.max(0,num(o.a)+num(o.b)*u+num(o.c)*u*u);
+    ctx.lineTo(X(cx+u),Y(y0+y))}
+   ctx.closePath()}
+  ctx.fillStyle=light?"#fff":"#0b1220";ctx.fill();
+  ctx.strokeStyle=light?"#b00":"#f59e0b";ctx.lineWidth=2;ctx.stroke();
+  ctx.fillStyle=light?"#b00":"#f59e0b";ctx.font="bold 13px sans-serif";ctx.textAlign="center";
+  ctx.fillText(String(i+1),X(cx),Y(y0+H/2)+4);
+ });
+ ctx.fillStyle=light?"#000":"#94a3b8";ctx.font="12px sans-serif";ctx.textAlign="center";
+ ctx.fillText(num(w.w)+" m",CW/2,Y(0)+18);
+ ctx.save();ctx.translate(X(0)-12,CH/2);ctx.rotate(-Math.PI/2);ctx.fillText(num(w.h)+" m",0,0);ctx.restore();
+ return sc;
+}
+
+/* ---- UI ---- */
+const $=id=>document.getElementById(id);
+function field(lbl,val,on,type,len){if(len){val=val===""?"":r4(num(val)*uf());const u=UN[S.unit||"m"];lbl=lbl.replace("(م)","("+u.ar+")").replace("(m)","("+u.en+")")}return`<label>${lbl}<input type="${type||"number"}" step="any" value="${String(val).replace(/"/g,"&quot;")}" data-f="${on}"${len?' data-len="1"':""}></label>`}
+function renderStatic(){
+ const T=t();document.documentElement.lang=S.lang;document.documentElement.dir=S.lang==="ar"?"rtl":"ltr";
+ document.title=T.title;
+ $("t_title").textContent=T.title;$("langBtn").textContent=T.lang;$("pdfBtn").textContent=T.pdf;
+ $("t_walls").textContent=T.walls;$("addW").textContent=T.add;$("dupW").textContent=T.dup;$("delW").textContent=T.del;
+ $("t_paint").textContent=T.paint;$("t_extra").textContent=T.extra;$("expBtn").textContent=T.exp;$("impBtn").textContent=T.imp;$("dlgCopy").textContent=T.dcopy;$("dlgApply").textContent=T.dapply;$("dlgFileB").textContent=T.dfile;$("dlgClose").textContent=T.close;$("t_view").textContent=T.view;$("t_res").textContent=T.res;
+}
+function renderTabs(){
+ $("tabs").innerHTML=S.walls.map((w,i)=>`<button class="tab ${i===cur?"on":""} ${w.active?"":"off"}" data-i="${i}">${esc(wname(w,i))}</button>`).join("");
+ $("wcount").textContent=t().count(S.walls.length);
+ $("tabs").querySelectorAll(".tab").forEach(b=>b.onclick=()=>{cur=+b.dataset.i;renderAll()});
+}
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+function renderForm(){
+ const T=t(),w=S.walls[cur];
+ let h=`<div class="grid">
+ ${field(T.name,w.name,"name","text")}
+ ${field(T.w,w.w,"w","number",1)}${field(T.h,w.h,"h","number",1)}</div>
+ <label class="chk" style="margin-top:10px"><input type="checkbox" id="actChk" ${w.active?"checked":""}>${T.active}</label>
+ <div class="row" style="justify-content:space-between;margin-top:12px"><h2 style="margin:0">${T.ops}</h2><button class="btn sm" id="addOp">${T.addOp}</button></div>`;
+ w.ops.forEach((o,i)=>{
+  h+=`<div class="op" data-o="${i}"><div class="head">
+   <select data-of="type">${TYPES.map(k=>`<option value="${k}" ${o.type===k?"selected":""}>${T[k]}</option>`).join("")}</select>
+   <span>#${i+1} · ${f2(opArea(o))} m²</span>
+   <button class="btn sm sec del" data-rm="${i}">✕</button></div><div class="grid">
+   ${field(T.ow,o.w,"w","number",1)}
+   ${(o.type==="rect"||o.type==="parab"||o.type==="sketch")?field(T.oh,o.h,"h","number",1):""}
+   ${o.type==="quad"?field(T.qa,o.a,"a")+field(T.qb,o.b,"b")+field(T.qc,o.c,"c"):""}
+   ${o.type==="custom"?`<label style="grid-column:1/-1">${T.fx}<input type="text" dir="ltr" value="${esc(o.fx||"")}" data-f="fx" placeholder="1.5 - x^2"></label>`:""}
+   ${field(T.ox,o.x,"x","number",1)}${field(T.osill,o.sill,"sill","number",1)}${field(T.qty,o.q==null?1:o.q,"q")}</div>
+   ${o.type==="quad"?`<div class="hint">${T.fq(o.a,o.b,o.c)} = ${f2(opArea(o))}</div>`:""}
+   ${o.type==="parab"?`<div class="hint">A = (2/3)·W·H</div>`:""}${o.type==="custom"?`<div class="hint">${customHint(o)}</div>`:""}${o.type==="sketch"?sketchUI(o,i,T):""}</div>`;
+ });
+ $("wallForm").innerHTML=h;
+ const root=$("wallForm");
+ root.querySelectorAll("input[data-f]").forEach(el=>el.oninput=()=>{
+  if(el.closest(".op")){const o=w.ops[+el.closest(".op").dataset.o];o[el.dataset.f]=cvv(el)}
+  else{w[el.dataset.f]=cvv(el)}
+  refresh(el.dataset.f==="name"||el.closest(".op"))});
+ root.querySelectorAll("select[data-of]").forEach(el=>el.onchange=()=>{const o=w.ops[+el.closest(".op").dataset.o];o.type=el.value;
+  if(o.type==="quad"&&o.a==null){o.a=1.5;o.b=0;o.c=-1}if(o.type==="custom"&&!o.fx)o.fx="1 - 4*x^2";if((o.type==="parab"||o.type==="rect"||o.type==="sketch")&&!num(o.h))o.h=1.5;if(o.type==="sketch"&&!o.pts)o.pts=[];renderAll()});
+ root.querySelectorAll("[data-rm]").forEach(b=>b.onclick=()=>{w.ops.splice(+b.dataset.rm,1);renderAll()});
+ bindSketch();
+ $("addOp").onclick=()=>{const n=w.ops.length;w.ops.push({type:"rect",w:1,h:1.2,a:1.5,b:0,c:-1,x:Math.min(.5+n*1.4,Math.max(0,num(w.w)-1)),sill:.9});renderAll()};
+ $("actChk").onchange=e=>{w.active=e.target.checked;renderAll()};
+}
+function renderPaint(){
+ const T=t(),p=S.paint;
+ $("paintForm").innerHTML=field(T.cover,p.cover,"cover")+field(T.coats,p.coats,"coats")+field(T.bucket,p.bucket,"bucket")+field(T.waste,p.waste,"waste");
+ $("paintForm").querySelectorAll("input").forEach(el=>el.oninput=()=>{p[el.dataset.f]=el.value;refresh(false)});
+}
+function renderStats(){
+ const T=t(),x=totals();
+ $("stats").innerHTML=[[T.gross,f2(x.gross)],[T.open,f2(x.op)],[T.net,f2(x.net)],[T.liters,f2(x.liters)],[T.buckets,x.buckets]].concat(x.putty>0?[[T.putty,f2(x.putty)]]:[],x.tiles>0?[[T.tiles,x.tiles]]:[]).map(a=>`<div class="stat"><b>${a[1]}</b><span>${a[0]}</span></div>`).join("")+perWall();
+}
+function perWall(){const T=t();return `<table class="pw"><tr><th>${T.wall}</th><th>${T.status}</th><th>${T.net}</th></tr>`+S.walls.map((w,i)=>{const c=wallCalc(w);return `<tr><td>${esc(wname(w,i))}</td><td>${w.active?T.on:T.offs}</td><td>${f2(c.net)}${c.op>c.gross?` <span style="color:var(--bad)">⚠ ${T.warn}</span>`:""}</td></tr>`}).join("")+"</table>"}
+function renderCanvas(){
+ const w=S.walls[cur];const sc=draw($("cv"),w);$("t_scale").textContent=t().scale(sc.toFixed(1))+" · "+t().drag;
+}
+function refresh(redrawForm){
+ save();renderStats();renderCanvas();
+ if(redrawForm){/* update area labels without losing focus */
+  const w=S.walls[cur];$("wallForm").querySelectorAll(".op").forEach(d=>{const o=w.ops[+d.dataset.o];const sp=d.querySelector(".head span");if(sp)sp.textContent="#"+(+d.dataset.o+1)+" · "+f2(opArea(o))+" m²";
+   const hn=d.querySelector(".hint");if(hn&&o.type==="custom")hn.textContent=customHint(o);if(hn&&o.type==="quad")hn.textContent=t().fq(o.a,o.b,o.c)+" = "+f2(opArea(o))});
+  const tb=$("tabs").children[cur];if(tb)tb.textContent=wname(w,cur)}
+}
+function renderAll(){renderStatic();renderTabs();renderForm();renderPaint();renderExtra();refresh(false)}
+
+/* ---- buttons ---- */
+$("langBtn").onclick=()=>{S.lang=S.lang==="ar"?"en":"ar";save();renderAll()};
+$("addW").onclick=()=>{S.walls.push(nw());cur=S.walls.length-1;renderAll()};
+$("dupW").onclick=()=>{const c=JSON.parse(JSON.stringify(S.walls[cur]));c.id=Date.now()+Math.random();c.name=c.name?c.name+" (2)":"";S.walls.splice(cur+1,0,c);cur++;renderAll()};
+$("delW").onclick=()=>{if(S.walls.length<=1){S.walls[0]=nw();}else{S.walls.splice(cur,1);cur=Math.max(0,cur-1)}renderAll()};
+
+/* ---- report ---- */
+function buildReport(){
+ const T=t(),x=totals();
+ let h=`<h1>${T.repT}</h1><div>${new Date().toLocaleDateString(S.lang==="ar"?"ar-EG":"en-GB")}</div>`;
+ S.walls.forEach((w,i)=>{
+  const c=wallCalc(w);
+  const cv=document.createElement("canvas");cv.width=800;cv.height=480;draw(cv,w,{light:true});
+  h+=`<div class="wb"><h2>${T.wall} ${i+1}: ${esc(wname(w,i))}</h2>
+  <img src="${cv.toDataURL("image/png")}" alt="">
+  <table><tr><th>${T.status}</th><th>${T.dims}</th><th>${T.gross}</th><th>${T.open}</th><th>${T.net}</th></tr>
+  <tr><td>${w.active?T.on:T.offs}</td><td>${num(w.w)} × ${num(w.h)}</td><td>${f2(c.gross)}</td><td>${f2(c.op)}</td><td>${f2(c.net)}</td></tr></table>`;
+  if(w.ops.length){h+=`<table><tr><th>${T.opening}</th><th>${T.type}</th><th>${T.dims}</th><th>${T.area}</th></tr>`+
+   w.ops.map((o,k)=>{const d=opDims(o);return`<tr><td>${k+1}</td><td>${T[o.type]}${o.type==="quad"?` (a=${num(o.a)}, b=${num(o.b)}, c=${num(o.c)})`:""}${o.type==="custom"?` f(x)=${esc(o.fx||"")}`:""} ×${Math.max(1,Math.floor(num(o.q)||1))}</td><td>${f2(d.W)} × ${f2(d.H)}</td><td>${f2(opArea(o))}</td></tr>`}).join("")+`</table>`}
+  else h+=`<div>${T.noop}</div>`;
+  h+=`</div>`;
+ });
+ const p=S.paint;
+ h+=`<div class="sum"><h2 style="margin-top:0">${T.sum}</h2><table>
+ <tr><th>${T.cover}</th><td>${num(p.cover)}</td><th>${T.coats}</th><td>${num(p.coats)}</td></tr>
+ <tr><th>${T.bucket}</th><td>${num(p.bucket)}</td><th>${T.waste}</th><td>${num(p.waste)}%</td></tr>
+ <tr><th>${T.totNet}</th><td colspan="3">${f2(x.net)} m²</td></tr>
+ <tr><th>${T.totL}</th><td colspan="3"><b>${f2(x.liters)} L</b></td></tr>
+ <tr><th>${T.totB}</th><td colspan="3"><b>${x.buckets}</b></td></tr>${x.ceil>0?`<tr><th>${T.ceil}</th><td colspan="3">${f2(x.ceil)}</td></tr>`:""}${x.putty>0?`<tr><th>${T.putty}</th><td colspan="3"><b>${f2(x.putty)}</b></td></tr>`:""}${x.tiles>0?`<tr><th>${T.tiles}</th><td colspan="3"><b>${x.tiles}</b></td></tr>`:""}</table></div>`;
+ $("report").innerHTML=h;
+}
+$("pdfBtn").onclick=()=>{buildReport();setTimeout(()=>window.print(),50)};
+window.addEventListener("beforeprint",buildReport);
+
+const cvEl=$("cv");
+cvEl.onpointerdown=e=>{if(!TR)return;const p=hit(e),w=S.walls[cur];for(let i=w.ops.length-1;i>=0;i--){const o=w.ops[i],d=opDims(o),x0=num(o.x),y0=num(o.sill);if(p.x>=x0&&p.x<=x0+d.W&&p.y>=y0&&p.y<=y0+d.H){drag={o,dx:p.x-x0,dy:p.y-y0};cvEl.setPointerCapture(e.pointerId);cvEl.style.cursor="grabbing";break}}};
+cvEl.onpointermove=e=>{if(!drag||!TR)return;const p=hit(e),w=S.walls[cur],d=opDims(drag.o);let x=Math.min(Math.max(0,p.x-drag.dx),Math.max(0,num(w.w)-d.W)),y=Math.min(Math.max(0,p.y-drag.dy),Math.max(0,num(w.h)-d.H));drag.o.x=+(Math.round(x/.05)*.05).toFixed(2);drag.o.sill=+(Math.round(y/.05)*.05).toFixed(2);refresh(false)};
+cvEl.onpointerup=cvEl.onpointercancel=()=>{if(drag){drag=null;cvEl.style.cursor="grab";renderForm()}};
+$("expBtn").onclick=()=>openDlg(JSON.stringify(S,null,1));
+$("impBtn").onclick=()=>openDlg("");
+$("dlgClose").onclick=()=>$("dlg").close();
+$("dlgCopy").onclick=()=>{const ta=$("dlgTa");ta.select();try{navigator.clipboard.writeText(ta.value)}catch(e){}try{document.execCommand("copy")}catch(e){}};
+$("dlgFileB").onclick=()=>$("dlgFile").click();
+$("dlgFile").onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{$("dlgTa").value=r.result};r.readAsText(f)};
+$("dlgApply").onclick=()=>{try{const o=JSON.parse($("dlgTa").value);if(!o||!Array.isArray(o.walls)||!o.walls.length)throw 0;o.walls.forEach(w=>{w.ops=Array.isArray(w.ops)?w.ops:[]});S=o;fixS();cur=0;save();$("dlg").close();renderAll()}catch(e){$("dlgMsg").textContent=t().badjson}};
+/* init */
+fixS();S.walls.forEach(w=>{w.ops=w.ops||[]});
+renderAll();
+</script>
+</body>
+</html>
